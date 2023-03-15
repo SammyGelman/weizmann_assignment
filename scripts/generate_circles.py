@@ -80,6 +80,7 @@ def grow_mushrooms(growing_table, max_radius, n_spores):
 
 def generate_data(max_radius, max_mushrooms, length, width, n_samples):
     bank = []
+    data = np.zeros((n_samples, length, width))
     spore_length = length - 2 * max_radius
     spore_width = width - 2 * max_radius
 
@@ -103,10 +104,10 @@ def generate_data(max_radius, max_mushrooms, length, width, n_samples):
                                  norm_type=cv2.NORM_MINMAX,
                                  dtype=cv2.CV_8U)
 
-        filename = '../circles/circle_' + str(i) + '.jpeg'
+        # filename = '../circles/circle_' + str(i) + '.jpeg'
 
         #save array to jpeg image in correct folder
-        imageio.imwrite(filename, sample_n)
+        # imageio.imwrite(filename, sample_n)
 
         #add file name to from of list
         coor.insert(0, filename)
@@ -114,12 +115,14 @@ def generate_data(max_radius, max_mushrooms, length, width, n_samples):
         #save coordinates to bank
         bank.append(coor)
 
-    return bank
+        #write sample to array
+        #I know appending would be smarter but for this sized dataset it's ok
+        data[i] = sample_n
+    return bank, data
 
 
 def gen_pos_txt(bank):
-    # open the output file for writing. This will delete all existing data for
-    # that address
+    # open the output file for writing. This will delete all existing data for that address
     with open('../ref_txt/pos.txt', 'w') as f:
         for i in range(len(bank)):
             for item in bank[i]:
@@ -127,5 +130,9 @@ def gen_pos_txt(bank):
             f.write("\n")
 
 
-bank = generate_data(20, 1, 64, 64, 500)
+bank, data = generate_data(20, 1, 64, 64, 500)
 gen_pos_txt(bank)
+
+#Since we are doing a binary classifier we will define circles as ones and rectangles as zeros
+labels = np.ones(len(data))
+np.savez("../data/circle_data.npz", data, labels)

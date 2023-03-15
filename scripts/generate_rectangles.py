@@ -71,7 +71,8 @@ def grow_mushrooms(growing_table, max_length):
 
 
 def generate_data(max_length, max_mushrooms, length, width, n_samples):
-    bank = []
+    # bank = []
+    data = np.zeros((n_samples, length, width))
     spore_length = length - 2 * max_length
     spore_width = width - 2 * max_length
 
@@ -96,8 +97,13 @@ def generate_data(max_length, max_mushrooms, length, width, n_samples):
                                  dtype=cv2.CV_8U)
 
         #save array to jpeg image in correct folder
-        imageio.imwrite('../rectangles/rectangle_' + str(i) + '.jpeg',
-                        sample_n)
+        # imageio.imwrite('../rectangles/rectangle_' + str(i) + '.jpeg',
+        # sample_n)
+
+        #save images to np.array to load later
+        data[i] = sample_n
+    # return bank, data
+    return data
 
 
 #     bank.append(grow_mushrooms(growing_table, max_length))
@@ -105,4 +111,9 @@ def generate_data(max_length, max_mushrooms, length, width, n_samples):
 # with open('sticks.pkl', 'wb') as f:
 #     pickle.dump(bank, f)
 #
-generate_data(20, 1, 64, 64, 500)
+data = generate_data(20, 1, 64, 64, 500)
+
+#since this is a binary classifier we will label circles as ones and rectangles as zeros
+labels = np.zeros(len(data))
+
+np.savez("../data/rectangle_data.npz", data, labels)
