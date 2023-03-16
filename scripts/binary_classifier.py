@@ -1,53 +1,52 @@
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from scikeras.wrappers import KerasClassifier
-from sklearn.model_selection import cross_val_score
-from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import StratifiedKFold
+import tensorflow as tf
+import numpy as np
+import matplotlib.pyplot as plt
 from generate_datasets import generate_datasets
+from classifier_plotting import plot_image, plot_value_array
 
 # load dataset
 circle_filename = "../data/circle_data.npz"
 rectangle_filename = "../data/rectangle_data.npz"
 
-training_dataset, testing_dataset = generate_datasets(circle_filename,
-                                                      rectangle_filename)
+training_data, training_labels, testing_data, testing_labels = generate_datasets(circle_filename, rectangle_filename)
+
+#build model
+#simple single layered model with output layer of length two, signiling the binary class estimate
+model = tf.keras.Sequential([
+    tf.keras.layers.Flatten(input_shape=training_data[0].shape),
+    tf.keras.layers.Dense(128, activation='relu'),
+    tf.keras.layers.Dense(2)
+])
+
+#complile the model with standard optimizer and crossentropy loss
+model.compile(optimizer='adam',
+              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), metrics=['accuracy'])
+
+#fit the model to the training data
+nepochs = 15
+model.fit(training_data, training_labels, epochs=nepochs)
+
+#evaluate model performance on test data
+test_loss, test_acc = model.evaluate(testing_data, testing_labels, verbose=2)
+
+print("\nTesting accuracy: ", test_acc)
+
+#Use a softmax function to convert the final layer of the model into easily readable probabilites
+probability_model = tf.keras.Sequential([model, tf.keras.layers.Softmax()])
+predictions = probability_model.predict(testing_data)
+
+# Plot the first X test images, their predicted labels, and the true labels.
+# Color correct predictions in blue and incorrect predictions in red.
+num_rows = 5
+num_cols = 3
+num_images = num_rows*num_cols
+plt.figure(figsize=(2*2*num_cols, 2*num_rows))
+for i in range(num_images):
+  plt.subplot(num_rows, 2*num_cols, 2*i+1)
+  plot_image(i, predictions[i], testing_labels, testing_data)
+  plt.subplot(num_rows, 2*num_cols, 2*i+2)
+  plot_value_array(i, predictions[i], testing_labels)
+plt.tight_layout()
+plt.show()
 
 
-# baseline model
-def create_baseline():
-    # create model
-    model = Sequential()
-    model.add(Dense(60, input_shape=(60, ), activation='relu'))
-    model.add(Dense(1, activation='sigmoid'))
-
-    # Compile model
-    model.compile(loss='binary_crossentropy',
-                  optimizer='adam',
-                  metrics=['accuracy'])
-
-    return model
-
-
-# evaluate model with standardized dataset
-estimator = KerasClassifier(model=create_baseline,
-                            epochs=100,
-                            batch_size=5,
-                            verbose=0)
-kfold = StratifiedKFold(n_splits=10, shuffle=True)
-
-
-def get_features(features, labels):
-    return features
-
-
-def get_labels(features, labels):
-    return labels
-
-
-features = training_dataset.map(get_features)
-labels = training_dataset.map(get_labels)
-
-results = cross_val_score(estimator, features, encoded_Y, cv=kfold)
-print("Baseline: %.2f%% (%.2f%%)" %
-      (results.mean() * 100, results.std() * 100))
