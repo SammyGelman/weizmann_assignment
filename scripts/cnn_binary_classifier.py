@@ -1,22 +1,31 @@
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
-from generate_datasets import generate_datasets
+from generate_cnn_datasets import generate_cnn_datasets
 from classifier_plotting import plot_image, plot_value_array
 
 # load dataset
 circle_filename = "../data/circle_data.npz"
 rectangle_filename = "../data/rectangle_data.npz"
 
-training_data, training_labels, testing_data, testing_labels = generate_datasets(circle_filename, rectangle_filename)
+training_data, training_labels, testing_data, testing_labels = generate_cnn_datasets(circle_filename, rectangle_filename)
+
+input_shape = training_data[0].shape
 
 #build model
-#simple single layered model with output layer of length two, signiling the binary class estimate
-model = tf.keras.Sequential([
-    tf.keras.layers.Flatten(input_shape=training_data[0].shape),
-    tf.keras.layers.Dense(128, activation='relu'),
-    tf.keras.layers.Dense(2)
-])
+
+#Start with convolutional base
+model = tf.keras.models.Sequential()
+model.add(tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=input_shape, data_format="channels_last"))
+model.add(tf.keras.layers.MaxPooling2D((2, 2)))
+model.add(tf.keras.layers.Conv2D(64, (3, 3), activation='relu'))
+model.add(tf.keras.layers.MaxPooling2D((2, 2)))
+model.add(tf.keras.layers.Conv2D(64, (3, 3), activation='relu'))
+
+#Feed output of convolutional to a dense layer
+model.add(tf.keras.layers.Flatten())
+model.add(tf.keras.layers.Dense(128, activation='relu'))
+model.add(tf.keras.layers.Dense(2))
 
 #complile the model with standard optimizer and crossentropy loss
 model.compile(optimizer='adam',
